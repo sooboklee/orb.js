@@ -323,6 +323,7 @@ Orb.Position = Orb.Position || function(obj){
       var a = 6378.135  //Earth's equational radius in WGS-72 (km)
 
       var r = Math.sqrt(xkm*xkm+ykm*ykm);
+      var r3 = Math.sqrt(xkm*xkm+ykm*ykm+ zkm*zkm); // calculate position vector length
       var lng = Math.atan2(ykm,xkm)/rad - lst;
       if(lng>360){lng = lng%360;}
       if(lng<0){lng = lng%360+360;}  
@@ -331,20 +332,24 @@ Orb.Position = Orb.Position || function(obj){
       var lat = Math.atan2(zkm,r);
       var e2 = f*(2-f);
       var tmp_lat = 0
+      
+      var lat2= lat;
 
       do{
-        tmp_lat = lat;
+        tmp_lat = lat2;
         var sin_lat= Math.sin(tmp_lat)
         var c = 1/Math.sqrt(1-e2*sin_lat*sin_lat);
-        lat= Math.atan2(zkm+a*c*e2*(Math.sin(tmp_lat)),r);
-      }while(Math.abs(lat-tmp_lat)>0.0001);
+        //lat= Math.atan2(zkm+a*c*e2*(Math.sin(tmp_lat)),r); // with a, only work on the earth surface
+        lat2= Math.atan2(zkm+ r3*c*e2*sin_lat,r); // use vector length r3 instead
+      }while(Math.abs(lat2-tmp_lat)>0.0001);
 
       var alt = r/Math.cos(lat)-a*c;
       var v = Math.sqrt(xdotkmps*xdotkmps + ydotkmps*ydotkmps + zdotkmps*zdotkmps);
 
       obj.position.geographic = {}
       obj.position.geographic.longitude = lng
-      obj.position.geographic.latitude = lat/rad;
+      obj.position.geographic.latitude = lat2/rad; // geodetic latitude
+      obj.position.geographic.latitude_geocentric = lat/rad; // add geocentric latitude attribute
       obj.position.geographic.altitude = alt;
       obj.position.geographic.velocity = v;
       return obj;
